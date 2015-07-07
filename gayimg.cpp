@@ -9,6 +9,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+  Mat src_gray;
   Mat im = imread(argc == 2 ? argv[1] : "images/mario.jpg", 1);
   if (im.empty())
   {
@@ -20,8 +21,10 @@ int main(int argc, char** argv)
   center.y=0;
 
   circle( im, Point( 200, 200 ), 32.0, Scalar( 0, 0, 255 ), 5, 8 );
+  cvtColor(im, src_gray, CV_RGB2GRAY );
 
   imshow("image", im);
+  imshow("image_gray",src_gray);
   waitKey(0);
 
   return 0;
