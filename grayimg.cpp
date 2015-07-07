@@ -9,6 +9,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+
   Mat src_gray, src_bin;
   Mat im = imread(argc == 2 ? argv[1] : "images/mario.jpg", 1);
   if (im.empty())
@@ -24,7 +25,7 @@ int main(int argc, char** argv)
   cvtColor(im, src_gray, CV_RGB2GRAY );
 
   imshow("image", im);
-  threshold(src_gray,src_bin,80,255,1);
+  threshold(src_gray,src_bin,254,255,4);
   imshow("image_gray",src_gray);
   imshow("image_binary",src_bin);
   waitKey(0);
