@@ -28,18 +28,13 @@ int main(int argc, char** argv)
   int pointy = 0;
 
   Scalar colorScalar = Scalar(0,255,0);
-  Scalar colorScalar_BLUE = Scalar(255,0,0);
+  Scalar colorScalar_BLUE = Scalar(255,255,255);
 
-  for(double cols = im.cols; pointx < cols; pointx+=cols/accuracy){
+  for(double cols = im.cols; pointx < cols; pointx+=1){
   	pointy=0;
-    for(double rows = im.rows; pointy < rows; pointy+=rows/accuracy){
-      if(im.at<Vec3b>(Point(pointx,pointy))[1] >240){
+    for(double rows = im.rows; pointy < rows; pointy+=1){
+      if(im.at<Vec3b>(Point(pointx,pointy))[1] >250){
   	    circle(im,Point(pointx,pointy), 0,colorScalar_BLUE,1);
-  	    //cout<<"y="<<pointy<<"\n";
-  	    //cout<<"x="<<pointx<<"\n";
-      }
-      else{
-  	    circle(im,Point(pointx,pointy), 0,colorScalar,1);
   	    //cout<<"y="<<pointy<<"\n";
   	    //cout<<"x="<<pointx<<"\n";
       }
