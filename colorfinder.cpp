@@ -12,7 +12,7 @@ const int accuracy = 200;
 int main(int argc, char** argv)
 {
 
-  Mat im = imread("images/colortest.jpg", 1);
+  Mat im = imread("images/colortest2.jpg", 1);
 
   clock_t start;
   start=clock();
@@ -33,7 +33,9 @@ int main(int argc, char** argv)
   for(double cols = im.cols; pointx < cols; pointx+=1){
   	pointy=0;
     for(double rows = im.rows; pointy < rows; pointy+=1){
-      if(im.at<Vec3b>(Point(pointx,pointy))[1] >250){
+      if(im.at<Vec3b>(Point(pointx,pointy))[0] < 120 &&
+      	 im.at<Vec3b>(Point(pointx,pointy))[1] > 180 &&
+      	 im.at<Vec3b>(Point(pointx,pointy))[2] < 100){
   	    circle(im,Point(pointx,pointy), 0,colorScalar_BLUE,1);
   	    //cout<<"y="<<pointy<<"\n";
   	    //cout<<"x="<<pointx<<"\n";
