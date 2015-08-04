@@ -12,7 +12,7 @@ using namespace std;
 const int testPointX=200;
 const int testPointY=100;
 
-const int accuracy = 10;
+const int accuracy = 200;
 Scalar colorScalar_BLUE = Scalar(255,255,0);
 Scalar colorScalar = Scalar(0,255,0);
 
@@ -23,7 +23,10 @@ int main(int argc, char** argv)
 {
 
   Mat im = imread("images/dots2.png", 1);
-
+  
+  if(accuracy > im.rows || accuracy > im.cols){
+  	cout<<"ERROR: acc cant be > rows or cols"<<endl;
+  }
   clock_t start;
   start=clock();
 
