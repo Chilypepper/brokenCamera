@@ -15,6 +15,8 @@ const int testPointX=200;
 const int testPointY=100;
 
 const int accuracy = 200;
+
+int edgeCount= 0;
 //BGR
 Scalar colorScalar_RED = Scalar(0,0,255);
 Scalar colorScalar = Scalar(0,255,0);
@@ -92,8 +94,8 @@ int main(int argc, char** argv)
 
   cout <<"Image has "<<im.rows<<" rows"<<endl;
   cout <<"Image has "<<im.cols<<" cols"<<endl;
-  int centerX = 200;
-  int centerY = 100;
+  int centerX = im.cols/2;
+  int centerY = im.rows/2;
   int currX = centerX;
   int currY = centerY;
   
@@ -101,6 +103,7 @@ int main(int argc, char** argv)
   	if(colorDifference(im,currX,currY,currX+5,currY) > 200){
   		pointList.push_back(Point(currX+5,currY));
   		foundEdge=true;
+  		edgeCount++;
   	}
   	currX++;
   }
@@ -111,6 +114,7 @@ int main(int argc, char** argv)
   	if(colorDifference(im,currX,currY,currX-5,currY) > 200){
   		pointList.push_back(Point(currX-5,currY));
   		foundEdge=true;
+  		edgeCount++;
   	}
   	currX--;
   }
@@ -121,6 +125,7 @@ int main(int argc, char** argv)
   	if(colorDifference(im,currX,currY,currX,currY+5) > 200){
   		pointList.push_back(Point(currX,currY+5));
   		foundEdge=true;
+  		edgeCount++;
   	}
   	currY++;
   }
@@ -134,21 +139,22 @@ int main(int argc, char** argv)
   	pointList.pop_back();
   }
   cout<<"Finding circle: Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
-
-  Point p1 = pointList2.back();
-  pointList2.pop_back();
-  Point p2 = pointList2.back();
-  pointList2.pop_back();
-  Point p3 = pointList2.back();
-  pointList2.pop_back();
-  
-  Point centre = findCenter(im,p1,p2,p3);
-  cout<<"Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
-
-  double radius = findDistance(p1.x,p1.y,centre.x,centre.y);
-  circle(im,centre,radius,colorScalar_RED,1);
-  cout<<centre<<" "<<radius<<endl;
-
+  if(edgeCount == 3){
+	  Point p1 = pointList2.back();
+	  pointList2.pop_back();
+	  Point p2 = pointList2.back();
+	  pointList2.pop_back();
+	  Point p3 = pointList2.back();
+	  pointList2.pop_back();
+	  Point centre = findCenter(im,p1,p2,p3);
+	  cout<<"Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
+	  double radius = findDistance(p1.x,p1.y,centre.x,centre.y);
+	  circle(im,centre,radius,colorScalar_RED,1);
+	  cout<<centre<<" "<<radius<<endl;
+  }
+  else{
+  	cout<<"No circle found!"<<endl;
+  }
   cout<<"Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
   imshow("image", im);
   waitKey(0);
