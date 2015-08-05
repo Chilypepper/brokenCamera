@@ -19,8 +19,11 @@ const int accuracy = 200;
 Scalar colorScalar_RED = Scalar(0,0,255);
 Scalar colorScalar = Scalar(0,255,0);
 
-vector<int> listX;
-vector<int> listY;
+vector<Point> pointList;
+vector<Point> pointList2;
+
+
+bool foundEdge=false;
 
 int colorDifference(Mat im, int p1x, int p1y, int p2x, int p2y){
   int p1r = (int)im.at<Vec3b>(Point(p1x,p1y))[0];
@@ -38,6 +41,35 @@ int colorDifference(Mat im, int p1x, int p1y, int p2x, int p2y){
   cout<<sqrt(p1r+p1g+p1b)<<endl;
   return sqrt(p1r+p1g+p1b);
 
+}
+
+Point findCenter(Mat im, Point A, Point B, Point C){
+	Point center;
+    float yDelta_a = B.y - A.y;
+    float xDelta_a = B.x - A.x;
+    float yDelta_b = C.y - B.y;
+    float xDelta_b = C.x - B.x;
+
+	float aSlope = yDelta_a/xDelta_a;
+    float bSlope = yDelta_b/xDelta_b;  
+
+    center.x = 0;
+    center.y = 0;
+
+    center.x = (aSlope*bSlope*(A.y - C.y) + bSlope*(A.x + B.x)- aSlope*(B.x+C.x) )/(2* (bSlope-aSlope) );
+    if(aSlope ==0){
+    	center.y = -1 * (center.x - (B.x + C.x) / 2) / bSlope +  (B.y + C.y) / 2;
+    }
+    else{
+    	center.y = -1*(center.x - (A.x+B.x)/2)/aSlope +  (A.y+B.y)/2;
+    }
+
+	return center;
+}
+int findDistance(int p1x, int p1y, int p2x, int p2y){
+	double dx = abs(p1x - p2x);
+	double dy = abs(p1y - p2y);
+	return sqrt(pow(dx,2.0)+pow(dy,2.0));
 }
 
 
@@ -64,22 +96,58 @@ int main(int argc, char** argv)
   int centerY = 100;
   int currX = centerX;
   int currY = centerY;
-  while(currX < im.cols){
+  
+  while(currX < im.cols && !foundEdge){
   	if(colorDifference(im,currX,currY,currX+5,currY) > 200){
-  		listX.push_back(currX);
-  		listY.push_back(currY);
+  		pointList.push_back(Point(currX+5,currY));
+  		foundEdge=true;
   	}
   	currX++;
   }
-  while(listX.size() > 0){
-  	int x = listX.back();
-  	int y = listY.back();
-  	circle(im,Point(x,y),3,colorScalar_RED,2);
-  	listX.pop_back();
-  	listY.pop_back();
-  }
-    circle(im,Point(centerX,centerY),5,colorScalar_RED,1);
 
+  foundEdge=false;
+  currX=centerX;
+  while(currX > 5 && !foundEdge){
+  	if(colorDifference(im,currX,currY,currX-5,currY) > 200){
+  		pointList.push_back(Point(currX-5,currY));
+  		foundEdge=true;
+  	}
+  	currX--;
+  }
+
+  foundEdge=false;
+  currX = centerX;
+  while(currY < im.rows - 5 && !foundEdge){
+  	if(colorDifference(im,currX,currY,currX,currY+5) > 200){
+  		pointList.push_back(Point(currX,currY+5));
+  		foundEdge=true;
+  	}
+  	currY++;
+  }
+  
+  while(pointList.size() > 0){
+  	Point individual = pointList.back();
+  	int x = individual.x;
+  	int y = individual.y;
+  	circle(im,Point(x,y),0,colorScalar_RED,2);
+  	pointList2.push_back(individual);
+  	pointList.pop_back();
+  }
+  cout<<"Finding circle: Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
+
+  Point p1 = pointList2.back();
+  pointList2.pop_back();
+  Point p2 = pointList2.back();
+  pointList2.pop_back();
+  Point p3 = pointList2.back();
+  pointList2.pop_back();
+  
+  Point centre = findCenter(im,p1,p2,p3);
+  cout<<"Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
+
+  double radius = findDistance(p1.x,p1.y,centre.x,centre.y);
+  circle(im,centre,radius,colorScalar_RED,1);
+  cout<<centre<<" "<<radius<<endl;
 
   cout<<"Time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC/1000)<<" ms\n";
   imshow("image", im);
