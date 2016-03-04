@@ -1,70 +1,181 @@
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include </home/peter/brokenGlasses/src/image_testing/libs/RiptideVision.h>
+#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/core.hpp>
 #include <iostream>
 #include <ctime>
-#include "geometry_msgs/Vector3.h"
-#include "std_msgs/Float32.h"
-#include <math.h>
-#include "imu_3dm_gx4/FilterOutput.h"
-#include "sensor_msgs/Joy.h"
-#include <std_msgs/Float32MultiArray.h>
-#include <opencv2/opencv.hpp>
+#include <string>
+#define CLOCKS_PER_MS (CLOCKS_PER_SEC / 1000)
 
 using namespace cv;
 using namespace std;
 
-Mat src; Mat src_gray, canny_output;
-int thresh = 100;
-int max_thresh = 255;
-RNG rng(12345);
-vector<vector<Point> > contours;
-vector<Vec4i> hierarchy;
+struct linePoint{
+  Point top;
+  Point bot;
+};
 
-/** @function main */
-int main( int argc, char** argv )
+Mat seperateColors(Mat src, vector<int> colors)
 {
-  /// Load source image and convert it to gray
-  src = imread( argv[1], 1 );
-  /// Convert image to gray and blur it
-  cvtColor( src, src_gray, CV_BGR2GRAY );
-  blur( src_gray, src_gray, Size(3,3) );
+  Mat input = src.clone();
 
-  /// Create Window
-  char* source_window = "Source";
-  Canny( src_gray, canny_output, thresh, thresh*2, 3 );
-  //CONVERT BACK TO COLOR
-  findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-  cvtColor(canny_output, canny_output, CV_GRAY2RGB);
 
-  if(contours.size() > 0){
-    //cout << "\n\n Found "<< contours.size() << " contours\n\n" << endl;
-    for(int i = 0; i < contours[0].size(); i++){
-      //out << "\t Found "<< contours[0].size() << " contours\n" << endl;
+  GaussianBlur(input,input,Size(21,21),0);
+  Mat imageHSV;
+  Mat imgThreshold;
 
-      circle(canny_output, contours[0][i], 2, Scalar(0,0,255));
+  cvtColor( input, imageHSV, COLOR_BGR2HSV );
+  circle(src,Point(500,200),2,Scalar(0,0,255));
+  switch(colors[6]){
+    case 0:
+        inRange(imageHSV, Scalar(colors[0], colors[2], colors[4]), Scalar(colors[1], colors[3], colors[5]), imgThreshold);
+    break;
+
+  }
+  //Add red secondary threshhold
+  circle(imgThreshold,Point(0,0),240,Scalar(0,0,0),-1);
+  return imgThreshold;
+}
+
+void colorAverage(Mat src, vector<int> colors, Point &averagePoint){
+  Mat M = seperateColors(src,colors);
+  averagePoint.x = 0;
+  averagePoint.y = 0;
+
+  long long int iSum = 0;
+  long long int jSum = 0;
+  int count = 1;
+
+  for(int i = 0; i < M.cols - 1; i++){
+    for(int j = 0; j < M.rows - 1; j++){
+      if(M.at<uchar>(j,i) > 0){
+        iSum += i;
+        jSum += j;
+        count++;
+      }
     }
   }
-  if(contours.size() > 1){
-    //cout << "\n\n Found "<< contours.size() << " contours\n\n" << endl;
-    for(int i = 0; i < contours[1].size(); i++){
-      //out << "\t Found "<< contours[0].size() << " contours\n" << endl;
+  averagePoint.x = iSum / count;
+  averagePoint.y = jSum / count;
+}
+void orientation(Mat src, vector<int> colors, Point averagePoint, linePoint &pair){
+  Mat M = seperateColors(src,colors); 
 
-      circle(canny_output, contours[1][i], 2, Scalar(255,255,0));
+  long long int iSumTop = 0;
+  long long int jSumTop = 0;
+
+  long long int iSumBot = 0;
+  long long int jSumBot = 0;
+
+  long long int count = 1;
+  //**Top half
+  for(int i = 0; i < M.cols - 1; i ++){
+    for(int j = 0; j < averagePoint.y - 30; j ++){
+      if(M.at<uchar>(j,i) > 0){
+        iSumTop += i;
+        jSumTop += j;
+        count++;
+      }
     }
   }
+  pair.top.x = iSumTop / count;
+  pair.top.y = jSumTop / count;
+
+  count = 1;
+
+  //** Bottom half
+  for(int i = 0; i < M.cols - 1; i++){
+    for(int j = averagePoint.y + 30; j < M.rows - 1; j++){
+      //cout << i << " " << j << endl;
+      if(M.at<uchar>(j,i) > 0){
+        iSumBot += i;
+        jSumBot += j;
+        count++;
+      }
+    }
+  }
+  pair.bot.x = iSumBot / count;
+  pair.bot.y = jSumBot / count;
+
+}
+void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
+  Point red;
+  colorAverage(src,REDS,red);
+  Point green;
+  colorAverage(src,GREENS,green);
+  Point yellow;
+  colorAverage(src,YELLOWS,yellow);
+  circle(drawing,red,5,Scalar(125,0,125),-1);
+  circle(drawing,green,5,Scalar(125,0,125),-1);
+  circle(drawing,yellow,5,Scalar(125,0,125),-1);
+}
+
+
+using namespace cv;
+int main(){
+
+  //0 to 180 for opencv
+  int hLow = 10 / 2;
+  int hUp = 65 / 2;
+
+  // 0 to 255 for opencv
+  int sLow = 30;
+  int sUp = 150;
+
+  //0 to 255 for oopencv
+  int vLow = 150;
+  int vUp = 255;
+
+  vector<int> colors(7);
+  colors.clear();
+  colors.push_back(hLow);
+  colors.push_back(hUp);
+  colors.push_back(sLow);
+  colors.push_back(sUp);
+  colors.push_back(vLow);
+  colors.push_back(vUp);
+  //"is red" bit
+  colors.push_back(0);
+  String j = "images/";
+  int p;
+
+  cin >> p;
+  j = j + (char)(p+48) + ".png";
+  Mat image = imread(j,1);
+  clock_t startTime = clock();
+  //Mat seperated = seperateColors(image, colors);
+  /************************************************************************************************
+  Point k;
+  colorAverage(image,colors,k);
   
-  imshow( "Contours", canny_output );
+  linePoint q;
+  orientation(image,colors,k,q);
+  clock_t endtime = clock();
+  Mat seperated2 = seperateColors(image, colors);
 
 
+  cvtColor(seperated2,seperated2,COLOR_GRAY2BGR);
+
+  circle(seperated2,Point(k.x,k.y),3,Scalar(170,0,120),-1);
+
+  line(seperated2,Point(q.bot.x,q.bot.y),Point(q.top.x,q.top.y), Scalar(255,0,255),2);
+  
+  cout << (double)(endtime - startTime) / CLOCKS_PER_SEC << endl;
+  namedWindow( "sep", CV_WINDOW_AUTOSIZE );
+  imshow("sep",seperated2);
+  
+  *************************************************************************************************/
+
+
+  RiptideVision::buoyInfo q;
+  buoyTask(image,q,image);
+
+
+  namedWindow( "source", CV_WINDOW_AUTOSIZE );
+  imshow("source",image);
+
+  
   waitKey(0);
-  return(0);
+
+  return 0;
 }
