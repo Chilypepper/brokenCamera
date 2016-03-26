@@ -25,7 +25,8 @@ Mat seperateColors(Mat src, vector<int> colors)
   Mat imgThreshold;
 
   cvtColor( input, imageHSV, COLOR_BGR2HSV );
-  circle(src,Point(500,200),2,Scalar(0,0,255));
+  circle(src,Point(410,390),2,Scalar(0,0,255));
+  cout << (int)imageHSV.at<Vec3b>(Point(410,390))[1] << " hue"<< endl;
   switch(colors[6]){
     case 0:
         inRange(imageHSV, Scalar(colors[0], colors[2], colors[4]), Scalar(colors[1], colors[3], colors[5]), imgThreshold);
@@ -33,7 +34,8 @@ Mat seperateColors(Mat src, vector<int> colors)
 
   }
   //Add red secondary threshhold
-  circle(imgThreshold,Point(0,0),240,Scalar(0,0,0),-1);
+  //circle(imgThreshold,Point(0,0),240,Scalar(0,0,0),-1);
+  cvtColor( imgThreshold, imgThreshold, COLOR_GRAY2BGR);
   return imgThreshold;
 }
 
@@ -98,6 +100,11 @@ void orientation(Mat src, vector<int> colors, Point averagePoint, linePoint &pai
   pair.bot.y = jSumBot / count;
 
 }
+void orientationv2(Mat src, vector<int> colors, vector<vector<Point> >& contours){
+	Mat seperated = seperateColors(src,colors);
+	cvtColor(seperated,seperated,COLOR_BGR2GRAY);
+	findContours(seperated,contours,0,1);
+}
 void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
   Point red;
   colorAverage(src,REDS,red);
@@ -105,9 +112,11 @@ void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
   colorAverage(src,GREENS,green);
   Point yellow;
   colorAverage(src,YELLOWS,yellow);
-  circle(drawing,red,5,Scalar(125,0,125),-1);
-  circle(drawing,green,5,Scalar(125,0,125),-1);
-  circle(drawing,yellow,5,Scalar(125,0,125),-1);
+
+
+  circle(drawing,red,3,PINK,-1);
+  circle(drawing,green,3,PINK,-1);
+  circle(drawing,yellow,3,PINK,-1);
 }
 
 
@@ -165,15 +174,27 @@ int main(){
   imshow("sep",seperated2);
   
   *************************************************************************************************/
+  
+  /*Mat yerrow = image.clone();
+  yerrow = seperateColors(yerrow,GREENS);
 
 
   RiptideVision::buoyInfo q;
   buoyTask(image,q,image);
-
-
+  */
+  vector<vector<Point> > contours;
+  Mat wContours = image;
+  orientationv2(image, colors, contours);
+  wContours = seperateColors(image,colors);
+  for(int i = 0; i < contours.size(); i++){
+  	for(int j = 0; j < contours[i].size(); j++){
+  		circle(wContours,contours[i][j],2,Scalar(0,0,255));
+  	}
+  }
   namedWindow( "source", CV_WINDOW_AUTOSIZE );
-  imshow("source",image);
-
+  imshow("source",wContours);
+  namedWindow( "src", CV_WINDOW_AUTOSIZE );
+  imshow("src",image);
   
   waitKey(0);
 
