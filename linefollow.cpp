@@ -100,10 +100,44 @@ void orientation(Mat src, vector<int> colors, Point averagePoint, linePoint &pai
   pair.bot.y = jSumBot / count;
 
 }
-void orientationv2(Mat src, vector<int> colors, vector<vector<Point> >& contours){
+void orientationv2(Mat src, vector<int> colors, linePoint& orientation, Mat& drawing){
 	Mat seperated = seperateColors(src,colors);
+	vector<vector<Point> > contours;
+	Mat wContours = src.clone();
+
 	cvtColor(seperated,seperated,COLOR_BGR2GRAY);
 	findContours(seperated,contours,0,1);
+
+	int MAX_CONT;
+	float area = 0;
+	for(int i = 0; i < contours.size(); i++){
+		float area2 = contourArea(contours[i]);
+		if(area2 > area){
+			MAX_CONT = i;
+			area  = area2;
+		}
+	}
+	vector<Point> minContours;
+	double epsilon = 0.1 * arcLength(contours[MAX_CONT],true);
+	approxPolyDP(contours[MAX_CONT], minContours, epsilon,true);
+
+	if(drawing.data){
+
+		Mat wContours = seperateColors(src,colors);
+
+		for(int j = 0; j < contours[MAX_CONT].size(); j++){
+			circle(wContours,contours[MAX_CONT][j],2,Scalar(0,0,255));
+		}	
+		for(int j = 0; j < minContours.size(); j++){
+			circle(wContours,minContours[j],5,Scalar(255,0,255));
+		}
+		line(wContours,minContours[0],minContours[1],Scalar(255,0,255),2);
+		drawing = wContours;
+	}
+	if(minContours.size() == 2){
+		orientation.top = minContours[0];
+		orientation.bot = minContours[1];
+	}
 }
 void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
   Point red;
@@ -182,17 +216,15 @@ int main(){
   RiptideVision::buoyInfo q;
   buoyTask(image,q,image);
   */
-  vector<vector<Point> > contours;
-  Mat wContours = image;
-  orientationv2(image, colors, contours);
-  wContours = seperateColors(image,colors);
-  for(int i = 0; i < contours.size(); i++){
-  	for(int j = 0; j < contours[i].size(); j++){
-  		circle(wContours,contours[i][j],2,Scalar(0,0,255));
-  	}
+  
+  Mat drawing = image;
+  linePoint orientation;
+
+  orientationv2(image,colors,orientation, drawing);
+  if(drawing.data){
+	  namedWindow( "source", CV_WINDOW_AUTOSIZE );
+	  imshow("source", drawing);
   }
-  namedWindow( "source", CV_WINDOW_AUTOSIZE );
-  imshow("source",wContours);
   namedWindow( "src", CV_WINDOW_AUTOSIZE );
   imshow("src",image);
   
