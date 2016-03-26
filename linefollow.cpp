@@ -15,7 +15,7 @@ struct linePoint{
   Point bot;
 };
 
-Mat seperateColors(Mat src, vector<int> colors)
+void seperateColors(Mat src, vector<int> colors, Mat& seperated)
 {
   Mat input = src.clone();
 
@@ -26,7 +26,7 @@ Mat seperateColors(Mat src, vector<int> colors)
 
   cvtColor( input, imageHSV, COLOR_BGR2HSV );
   circle(src,Point(410,390),2,Scalar(0,0,255));
-  cout << (int)imageHSV.at<Vec3b>(Point(410,390))[1] << " hue"<< endl;
+  //cout << (int)imageHSV.at<Vec3b>(Point(410,390))[1] << " hue"<< endl;
   switch(colors[6]){
     case 0:
         inRange(imageHSV, Scalar(colors[0], colors[2], colors[4]), Scalar(colors[1], colors[3], colors[5]), imgThreshold);
@@ -36,11 +36,12 @@ Mat seperateColors(Mat src, vector<int> colors)
   //Add red secondary threshhold
   //circle(imgThreshold,Point(0,0),240,Scalar(0,0,0),-1);
   cvtColor( imgThreshold, imgThreshold, COLOR_GRAY2BGR);
-  return imgThreshold;
+  seperated = imgThreshold;
 }
 
 void colorAverage(Mat src, vector<int> colors, Point &averagePoint){
-  Mat M = seperateColors(src,colors);
+  Mat M;
+  seperateColors(src,colors, M);
   averagePoint.x = 0;
   averagePoint.y = 0;
 
@@ -61,7 +62,8 @@ void colorAverage(Mat src, vector<int> colors, Point &averagePoint){
   averagePoint.y = jSum / count;
 }
 void orientation(Mat src, vector<int> colors, Point averagePoint, linePoint &pair){
-  Mat M = seperateColors(src,colors); 
+  Mat M;
+  seperateColors(src,colors, M); 
 
   long long int iSumTop = 0;
   long long int jSumTop = 0;
@@ -101,9 +103,10 @@ void orientation(Mat src, vector<int> colors, Point averagePoint, linePoint &pai
 
 }
 void orientationv2(Mat src, vector<int> colors, linePoint& orientation, Mat& drawing){
-	Mat seperated = seperateColors(src,colors);
+	Mat seperated;
+	seperateColors(src,colors, seperated);
 	vector<vector<Point> > contours;
-	Mat wContours = src.clone();
+	//Mat wContours = src.clone();
 
 	cvtColor(seperated,seperated,COLOR_BGR2GRAY);
 	findContours(seperated,contours,0,1);
@@ -118,21 +121,26 @@ void orientationv2(Mat src, vector<int> colors, linePoint& orientation, Mat& dra
 		}
 	}
 	vector<Point> minContours;
-	double epsilon = 0.1 * arcLength(contours[MAX_CONT],true);
+	double epsilon = .1 * arcLength(contours[MAX_CONT],true);
 	approxPolyDP(contours[MAX_CONT], minContours, epsilon,true);
 
 	if(drawing.data){
 
-		Mat wContours = seperateColors(src,colors);
+		Mat wContours;
+		seperateColors(src,colors, wContours);
 
 		for(int j = 0; j < contours[MAX_CONT].size(); j++){
 			circle(wContours,contours[MAX_CONT][j],2,Scalar(0,0,255));
 		}	
+
 		for(int j = 0; j < minContours.size(); j++){
 			circle(wContours,minContours[j],5,Scalar(255,0,255));
 		}
+		cout <<"\n\n" << minContours.size() <<"\n\n"<< endl;
 		line(wContours,minContours[0],minContours[1],Scalar(255,0,255),2);
+		cout <<"Does it ";
 		drawing = wContours;
+		cout <<"Break?" << endl;
 	}
 	if(minContours.size() == 2){
 		orientation.top = minContours[0];
@@ -151,6 +159,71 @@ void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
   circle(drawing,red,3,PINK,-1);
   circle(drawing,green,3,PINK,-1);
   circle(drawing,yellow,3,PINK,-1);
+}
+//target is clockwise 0-3
+void torpedoTask(Mat src, vector<int> colors, int target, Mat &drawing){
+	bool maxX;
+	bool maxY;
+
+	switch(target){
+		case 0:
+			maxX = true;
+			maxY = false;
+		break;
+		case 1:
+			maxX = true;
+			maxY = true;
+		break;
+		case 2:
+			maxX = false;
+			maxY = true;
+		break;
+		case 3:
+			maxX = false;
+			maxY = false;
+		break;
+	}
+	Mat seperated;
+	seperateColors(src,colors, seperated);
+	vector<vector<Point> > contours;
+
+	cvtColor(seperated,seperated,COLOR_BGR2GRAY);
+	findContours(seperated,contours,0,1);
+	if(contours.size() == 4){
+		Mat wContours = seperated.clone();
+		cvtColor(wContours, wContours, COLOR_GRAY2BGR);
+
+		vector<Point> largest1;
+		int sizes[4];
+
+		for(int q = 0; q < 4; q++){
+			float area = 0;
+			int largest;
+			for(int i = 0; i < contours.size(); i++){
+				float area2 = contourArea(contours[i]);
+				if(area2 > area){
+					area = area2;
+					int largest = i;
+				}
+			}
+			sizes[q] = largest;
+		}
+		if(drawing.data){
+			int i = 255;
+			for(int p = 0; p < 4; p++){
+				Scalar red = Scalar(0,0,i);
+				drawContours(wContours,contours[sizes[p]], -1, red);
+				i -= 30;
+			}		
+		}
+		drawing = wContours;
+	}
+
+
+
+
+
+
 }
 
 
@@ -184,7 +257,8 @@ int main(){
 
   cin >> p;
   j = j + (char)(p+48) + ".png";
-  Mat image = imread(j,1);
+  Mat image = imread("images/squaretest.png",1);
+  cout << j << endl;
   clock_t startTime = clock();
   //Mat seperated = seperateColors(image, colors);
   /************************************************************************************************
@@ -216,17 +290,27 @@ int main(){
   RiptideVision::buoyInfo q;
   buoyTask(image,q,image);
   */
-  
+
+  if(image.empty()){
+  	cout <<"Empty image" << endl;
+  }
+  else{
+  	  namedWindow( "src", CV_WINDOW_AUTOSIZE );
+ 	 imshow("src",image);
+  }
+  cout << "1";
   Mat drawing = image;
+  cout << "2";
   linePoint orientation;
 
-  orientationv2(image,colors,orientation, drawing);
+  torpedoTask(image,REDS, 1, drawing);
+    cout << "3";
+
   if(drawing.data){
 	  namedWindow( "source", CV_WINDOW_AUTOSIZE );
 	  imshow("source", drawing);
   }
-  namedWindow( "src", CV_WINDOW_AUTOSIZE );
-  imshow("src",image);
+
   
   waitKey(0);
 
