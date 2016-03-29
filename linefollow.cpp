@@ -147,6 +147,49 @@ void orientationv2(Mat src, vector<int> colors, linePoint& orientation, Mat& dra
 		orientation.bot = minContours[1];
 	}
 }
+void orientationv3(Mat src, vector<int> colors, linePoint& orientation, Mat& drawing){
+  bool big = true;
+  Mat seperated;
+  seperateColors(src,colors, seperated);
+  vector<vector<Point> > contours;
+  Mat wContours = src.clone();
+
+  cvtColor(seperated,seperated,COLOR_BGR2GRAY);
+  findContours(seperated,contours,0,1);
+
+  int MAX_CONT = -1;
+  float area = 0;
+  for(int i = 0; i < contours.size(); i++){
+    float area2 = contourArea(contours[i]);
+    if(area2 > area){
+      MAX_CONT = i;
+      area  = area2;
+    }
+  }
+  if(MAX_CONT >= 0){
+      double epsilon = 0.1 * arcLength(contours[MAX_CONT],true);
+
+      Vec4f bfline;
+      fitLine(contours[MAX_CONT], bfline, CV_DIST_L2,0, 0.01, 0.01);
+
+      if(drawing.data){
+        Mat wContours;
+        seperateColors(src,colors, wContours);
+
+        for(int j = 0; j < contours[MAX_CONT].size(); j++){
+          circle(wContours,contours[MAX_CONT][j],2,Scalar(0,0,255));
+        }
+        circle(wContours,Point(bfline[0],bfline[1]),2,PINK);
+        circle(wContours,Point(bfline[2],bfline[3]),2,PINK);
+        if(!big) line(wContours,Point(bfline[2],bfline[3]),Point(bfline[2]+bfline[0]*100,bfline[3]+bfline[1]*100),Scalar(255,0,255),2);
+        else{
+     		line(wContours,Point(bfline[2],bfline[3]),Point(bfline[2]+bfline[0]*1000,bfline[3]+bfline[1]*1000),Scalar(255,0,255),2);   	
+     	    line(wContours,Point(bfline[2],bfline[3]),Point(bfline[2]+bfline[0]*-1000,bfline[3]+bfline[1]*-1000),Scalar(255,0,255),2);
+        }
+        drawing = wContours;
+    }
+  }
+}
 void buoyTask(Mat src, RiptideVision::buoyInfo feedback,Mat &drawing){
   Point red;
   colorAverage(src,REDS,red);
@@ -257,7 +300,7 @@ int main(){
 
   cin >> p;
   j = j + (char)(p+48) + ".png";
-  Mat image = imread("images/squaretest.png",1);
+  Mat image = imread("images/frame0003.jpg",1);
   cout << j << endl;
   clock_t startTime = clock();
   //Mat seperated = seperateColors(image, colors);
@@ -302,8 +345,9 @@ int main(){
   Mat drawing = image;
   cout << "2";
   linePoint orientation;
-
-  torpedoTask(image,REDS, 1, drawing);
+  seperateColors(drawing,YELLOWS,drawing);
+  orientationv3(image,YELLOWS,orientation,drawing);
+  //torpedoTask(image,REDS, 1, drawing);
     cout << "3";
 
   if(drawing.data){
